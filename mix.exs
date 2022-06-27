@@ -1,0 +1,36 @@
+defmodule ExploreAstApp.MixProject do
+  use Mix.Project
+
+  def project do
+    [
+      app: :explore_ast_app,
+      version: "0.1.0",
+      elixir: "~> 1.12",
+      start_permanent: Mix.env() == :prod,
+      deps: deps(),
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test
+      ]
+    ]
+  end
+
+  def application do
+    [
+      extra_applications: [:logger],
+      mod: {ExploreAstApp.Application, []}
+    ]
+  end
+
+  defp deps do
+    [
+      {:plug_cowboy, "~> 2.0"},
+      {:jason, "~> 1.3"},
+      {:distillery, "~> 2.1"},
+      {:poison, "~> 5.0"}
+    ]
+  end
+end
