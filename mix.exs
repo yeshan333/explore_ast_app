@@ -30,7 +30,8 @@ defmodule ExploreAstApp.MixProject do
       {:plug_cowboy, "~> 2.0"},
       {:jason, "~> 1.3"},
       {:distillery, "~> 2.1"},
-      {:poison, "~> 5.0"}
+      {:poison, "~> 5.0"},
+      {:excoveralls, "~> 0.14.5", only: :test}
     ]
   end
 end
