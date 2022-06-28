@@ -31,7 +31,8 @@ defmodule ExploreAstApp.MixProject do
       {:jason, "~> 1.3"},
       {:distillery, "~> 2.1"},
       {:poison, "~> 5.0"},
-      {:excoveralls, "~> 0.14.5", only: :test}
+      {:excoveralls, "~> 0.14.5", only: :test},
+      {:ex_integration_coveralls, "~> 0.3.0"}
     ]
   end
 end

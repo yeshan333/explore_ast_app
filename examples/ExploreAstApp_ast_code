@@ -1,0 +1,69 @@
+[
+  {:attribute, 1, :file, {'lib/explore_ast_app.ex', 1}},
+  {:attribute, 1, :module, ExploreAstApp},
+  {:attribute, 1, :compile, [:no_auto_import]},
+  {:attribute, 1, :export, [__info__: 1, hello: 0]},
+  {:attribute, 1, :spec,
+  {{:__info__, 1},
+    [
+      {:type, 1, :fun,
+      [
+        {:type, 1, :product,
+          [
+            {:type, 1, :union,
+            [
+              {:atom, 1, :attributes},
+              {:atom, 1, :compile},
+              {:atom, 1, :functions},
+              {:atom, 1, :macros},
+              {:atom, 1, :md5},
+              {:atom, 1, :exports_md5},
+              {:atom, 1, :module},
+              {:atom, 1, :deprecated}
+            ]}
+          ]},
+        {:type, 1, :any, []}
+      ]}
+    ]}},
+  {:function, 0, :__info__, 1,
+  [
+    {:clause, 0, [{:atom, 0, :module}], [], [{:atom, 0, ExploreAstApp}]},
+    {:clause, 0, [{:atom, 0, :functions}], [],
+      [
+        {:cons, 0, {:tuple, 0, [{:atom, 0, :hello}, {:integer, 0, 0}]},
+        {nil, 0}}
+      ]},
+    {:clause, 0, [{:atom, 0, :macros}], [], [nil: 0]},
+    {:clause, 0, [{:atom, 0, :exports_md5}], [],
+      [
+        {:bin, 0,
+        [
+          {:bin_element, 0,
+            {:string, 0,
+            [240, 105, 247, 119, 22, 50, 219, 207, 90, 95, 127, 92, ...]},
+            :default, :default}
+        ]}
+      ]},
+    {:clause, 0, [{:match, 0, {:var, 0, :Key}, {:atom, 0, :attributes}}],
+      [],
+      [
+        {:call, 0,
+        {:remote, 0, {:atom, 0, :erlang}, {:atom, 0, :get_module_info}},
+        [{:atom, 0, ExploreAstApp}, {:var, 0, :Key}]}
+      ]},
+    {:clause, 0, [{:match, 0, {:var, 0, :Key}, {:atom, 0, :compile}}], [],
+      [
+        {:call, 0,
+        {:remote, 0, {:atom, 0, :erlang}, {:atom, 0, :get_module_info}},
+        [{:atom, 0, ExploreAstApp}, {:var, 0, :Key}]}
+      ]},
+    {:clause, 0, [{:match, 0, {:var, 0, :Key}, {:atom, 0, :md5}}], [],
+      [
+        {:call, 0,
+        {:remote, 0, {:atom, 0, :erlang}, {:atom, 0, :get_module_info}},
+        [{:atom, 0, ExploreAstApp}, {:var, 0, :Key}]}
+      ]},
+    {:clause, 0, [{:atom, 0, :deprecated}], [], [nil: 0]}
+  ]},
+  {:function, 15, :hello, 0, [{:clause, 15, [], [], [{:atom, 0, :world}]}]}
+]
