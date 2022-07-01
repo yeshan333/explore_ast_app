@@ -36,7 +36,7 @@ end
 
 environment :prod do
   set include_erts: true
-  set include_src: false
+  set include_src: true
   set cookie: :"?:AK?>:[/=Oh]Vl0UZJYU%%U!4E:=l%YGyT.Tw4jLCSd4nOnbXr;Hnubzw?P8Alw"
   set vm_args: "rel/vm.args"
 end
@@ -52,4 +52,3 @@ release :explore_ast_app do
     :runtime_tools
   ]
 end
-
