@@ -471,7 +471,8 @@ iex(explore_ast_app@127.0.0.1)8> Enum.at(Map.get(result, :files), 3)
 
 ![coverage-arch](./assets/architecture.jpg)
 
-我们基于 [ex_integration_coveralls](https://github.com/yeshan333/ex_integration_coveralls) 做拓展, 在 Elixir Application 启动后, 拉起一个 http worker 将代码覆盖率数据实时暴露出去, 由 Coverage Push Gateway 负责定时拉取覆盖率数据（Gateway 可以是一个 OTP Application, ）, 在集成/系统测试系统告知测试结束后, Gateway 将覆盖率 push 给 Cover Center（覆盖率中心）进行代码覆盖率展示.
+我们基于 [ex_integration_coveralls](https://github.com/yeshan333/ex_integration_coveralls) 做拓展, 在 Elixir Application 启动后, 拉起一个 http worker 将代码覆盖率数据实时暴露出去, 方便与异构系统的通信. 由 Coverage Push Gateway 负责定时拉取覆盖率数据（Gateway 可以是一个 OTP Application, 这让可以直接让 
+`ex_integration_coveralls` 拉起 [GenServer Worker](https://github.com/yeshan333/ex_integration_coveralls/blob/main/lib/ex_integration_coveralls/cov_stats_worker.ex) 在分布式 OTP 系统进行交互集成）, 在集成/系统测试系统告知测试结束后, Gateway 将覆盖率 push 给 Cover Center（覆盖率中心）进行代码覆盖率展示.
 
 End（long way to go）.
 
