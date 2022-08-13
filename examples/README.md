@@ -481,7 +481,7 @@ Based on this, we can realize the collection of code coverage with large-scale (
 
 With the continuous expansion of the Elixir/Erlang microservice system, the coverage collection method shown in the previous section needs further evolution. Referring to the design of [Prometheus Pull-Base](https://prometheus.io/docs/introduction/overview/#architecture), the overall design (combination of Pull & Push mode) is as follows:
 
-![coverage_system_design](assets/en/coverage_system.jpg)
+![coverage-arch](assets/en/coverage-arch.jpg)
 
 We expand based on [ex_integration_coveralls](https://github.com/yeshan333/ex_integration_coveralls). After the Elixir Application is started, a http worker is started up to expose the code coverage data in real time, which is convenient for communication with heterogeneous systems. The Coverage Push Gateway is responsible for regularly pulling the coverage data (Gateway can be a OTP Application, which allows `ex_integration_coveralls` to directly start up the custom [GenServer Worker](https://github.com/yeshan333/ex_integration_coveralls/blob/main/lib/ex_integration_coveralls/cov_stats_worker.ex) for interactive integration test system in the distributed OTP system), after the integration/system test system informs the end of the test, the Gateway pushes the coverage data to the `Cover Center` for code coverage rate display.
 
