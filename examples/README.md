@@ -1,61 +1,66 @@
-# Elixir 连续运行时代码覆盖率采集方案
+# The solution of Elixir continuous runtime system code coverage collection
 
-## 1. 浅谈代码覆盖率
-作为 SET 和 SWE, 我们经常需要编写单元测试或集成测试用例来验证系统/应用的正确性, 但同时我们也常会质疑我们的测试是否充分了. 这时测试覆盖率是可以辅助用来衡量我们测试充分程度的一种手段, 增强发布成功率与信心, 同时给了我们更多可思考的视角. 值的注意的是代码覆盖率高不能说明代码质量高, 但是反过来看, 代码覆盖率低, 代码质量不会高到哪里去.
+> [zh_hans README](./README_cn.md)
 
-大部分的编程语言都自带了单元测试覆盖率的收集能力, Elixir 也同样如此, 官方提供的 [mix 构建工具](https://hexdocs.pm/mix/1.13.4/Mix.Tasks.Test.html#module-coverage)自带了覆盖率的收集能力,  但目前只适用于离线（offline）系统, 对于运行时系统, 并不适用. 本文将会基于 Erlang 的 cover 模块, 给出一个 Elixir 运行时系统的解决方案. 既然 cover 是 Erlang 的内置模块, 但为什么它也同样适用于 Elixir, 我们将会在后续的环节中揭开它神秘的面纱. 在开始之前, 让我们先看下开源社区进行运行时系统代码覆盖率采集的两种主流方式（这里我们看下语言社区生态庞大的 Java 的字节码插桩方式）:
+Code coverage is an effective means to assist software engineers in verifying code quality. The runtime environment's ability to collect code coverage fully combines black and white box testing capabilities and greatly increases engineers' confidence in software quality. This article introduces a solution for code coverage collection in the Elixir runtime environment, and provides an in-depth insight into its internal principles.
 
-![java_bytecode_tecs](./assets/java_bytecode_tecs.jpg)
+## 1. Brief talk on code coverage
 
-接下来让我们关注一下本文的 Elixir 运行时覆盖率收集的核心 - cover 模块.
+As a [SDET](https://hvitis.dev/google-qa-testing-article-on-manual-and-automation-test-engineers-sdet) or a SWE, we often need to write unit tests or integration test cases to verify the correctness of the system/application, but at the same time we often question whether our tests are adequate. At this time, test coverage is a means of measuring the adequacy of our testing, enhancing the success rate and confidence of the software release, and giving us more reflective perspectives. The note of the value is that high code coverage does not indicate high code quality, but conversely, code coverage is low, and code quality will not be high.
 
-## 2. 深度解析 Erlang Cover 覆盖率收集实现机制
+Most programming languages come with the ability to collect unit test coverage, and the same is true for Elixir, the official [mix](https://hexdocs.pm/mix/1.13.4/Mix.Tasks.Test.html#module-coverage) build tool comes with the ability to collect coverage, but it is currently only suitable for offline system, not for runtime system. This article will be based on Erlang's cover module to give a solution for the Elixir runtime system. Since [cover](https://www.erlang.org/doc/man/cover.html) is Erlang's built-in module, but why it works equally well with Elixir, we'll unveil its mystery in a follow-up. Before we get started, let's take a look at the two mainstream ways in which the open source community collects code coverage at runtime (here we look at the bytecode stubbing method of Java, which has a huge ecosystem of the language community):
 
-### 2.1 Erlang Cover 简介
+![java_bytecode_tecs](assets/en/java_bytecode_tecs.png)
 
-cover 是 Erlang 内置工具集（[tools set](https://www.erlang.org/doc/apps/tools/index.html)）的一部分, 提供了代码覆盖率收集的能力.
+Next let's focus on the core of elixir runtime coverage collection in this article - the cover module.
 
-### 2.2 Erlang 代码覆盖率收集实现分析
+## 2. Delve into the Erlang Cover coverage collection implementation mechanism
 
-从 Erlang 关于 [cover](https://www.erlang.org/doc/man/cover.html) 模块官方手册可以知道, cover 统计了 Erlang 程序中每一可执行（[executable line](https://www.erlang.org/doc/man/cover.html#description)）被执行的次数.
+### 2.1. Introduction Erlang Cover
 
-从官方文档的介绍来看, cover 可以用于运行时系统的代码覆盖率收集, cover 进行代码插桩时, 并不会对任何模块的代码源文件或编译后生成的 beam 文件进行修改（即业界所说的 On-The-Fly 模式）. 运行时系统每次可执行行被调用一次, 都会更新调用次数到 cover 用于存储数据的内存数据库中, 用于后续的覆盖率分析.
+[cover](https://www.erlang.org/doc/man/cover.html) is part of Erlang's built-in tools set, providing a powerful ability to collect code coverage.
 
-接下来, 我们将会去探索下 cover 进行 On-The-Fly 插桩的细节.
+### 2.2. Erlang code coverage collection implementation analysis
 
-### 2.3 了解 BEAM File Format
+As you can see from Erlang's official manual of the cover module, cover counts the number of times every executable line in the Erlang program is executed.
 
-在进一步了解 cover 实现细节之前, 我们有必要先了解下 Elixir 源码编译后的产物 BEAM 文件的格式. Elixir （.ex 文件）编译后的产物与 Erlang （.erl 文件）一样, 都是一个二进制分块文件（binary chunked file）, 它被划分为了多个 section, 用于存储程序运行时用到的信息（如虚拟机操作指令）. Erlang/Elixir 中, 每一个模块都会有一个对应的 BEAM 文件. BEAM 文件大致的结构如下图:
+From the introduction of the official documentation, cover can be used for code coverage collection of the runtime system. When the code is instrumented, it does not modify the code source files of any modules or the beam files generated after compilation (that is the industry calls the On-The-Fly mode). Every time the executable row is called, the runtime system updates the number of calls to cover in an in-memory database (erlang ets) for storing data for subsequent coverage analysis.
 
-![BEAM FILE FORMAT](./assets/beamfile-format.jpg)
+Next, we'll explore the details of the On-The-Fly mode under cover.
 
-让我们来通过一个 Elixir mini demo 项目查看下 beam 文件大概内容:
+### 2.3. Learn about BEAM File Format
 
-- Step 1、clone 项目 [yeshan333/explore_ast_app](https://github.com/yeshan333/explore_ast_app) 到本地:
+Before we can further understand the details of the cover implementation, it is necessary to understand the format of the BEAM file after the elixir source code is compiled. The compiled product of the Elixir (.ex file), like the Erlang (.erl file), is a binary chunked file, which is divided into several sections to store information used when the program runs (such as virtual machine operation instructions). In Erlang/Elixir, each module will have a corresponding BEAM file. The approximate structure of the BEAM file is as follows:
+
+![beam_file_format](assets/en/beam_file_format.png)
+
+Let's take a look at the approximate content of the beam file through an Elixir mini [demo](https://github.com/yeshan333/explore_ast_app) project:
+
+- Step 1. Clone the project [yeshan333/explore_ast_app](https://github.com/yeshan333/explore_ast_app) to the local:
 
 ```shell
 git clone https://github.com/yeshan333/explore_ast_app.git
 cd explore_ast_app
 ```
 
--  Step 2、构建此项目为 OTP release 格式, 本地需要安装 Elixir 和 Erlang:
+- Step 2. Build this project in [OTP release format](https://www.erlang.org/doc/design_principles/release_structure.html). (note: Elixir and Erlang need to be installed locally):
 
 ```shell
 MIX_ENV=prod mix distillery.release
 ```
 
-可以关注到, 每一个 Elixir 模块, 都被编译成了一个 BEAM 文件（于目录`_build/prod/rel/explore_ast_app/lib/explore_ast_app-0.1.0/ebin` 中可以看到）.
+It can be noted that each Elixir module is compiled into a BEAM file (can be seen in the directory `_build/prod/rel/explore_ast_app/lib/explore_ast_app-0.1.0/ebin`).
 
-- Step 3、接下来让我们通过 Erlang 的标准库 [beam_lib](https://www.erlang.org/doc/man/beam_lib.html) 文件查看 Beam 文件中的 chunk:
+- Step 3. Next, let's view the chunks in the Beam file through Erlang's standard library [beam_lib](https://www.erlang.org/doc/man/beam_lib.html#):
 
 ```shell
-# 打开 iex console
+# open the iex console
 iex -S mix
 ```
 
-查看编译后 BEAM 文件 (`Elixir.ExploreAstApp.beam`) 的所有 chunks:
+View all chunks of the compiled BEAM file (`Elixir.ExploreAstApp.beam`):
 
-```erlang
+```elixir
 $ iex -S mix
 Erlang/OTP 24 [erts-12.1] [source] [64-bit] [smp:12:12] [ds:12:12:10] [async-threads:1] [jit] [dtrace]
 
@@ -111,9 +116,9 @@ iex(2)> all_chunks = :beam_lib.all_chunks(String.to_charlist(beam_file_path))
  ]}
 ```
 
-可以看到, 获取到的 chunks 是和之前的图对应的. 我们还可以通过 [beam_lib](https://www.erlang.org/doc/man/beam_lib.html) 标准库获取到模块（ExploreAstApp）对应的 Erlang AST（抽象语法树）:
+As you can see, the obtained chunks correspond to the previous diagram. We can also obtain the Erlang AST (abstract syntax tree) corresponding to the module (`ExploreAstApp`) through the beam_lib standard library:
 
-```erlang
+```elixir
 iex(3)> result = :beam_lib.chunks(String.to_charlist(beam_file_path), [:abstract_code])
 {:ok,
  {ExploreAstApp,
@@ -191,38 +196,44 @@ iex(3)> result = :beam_lib.chunks(String.to_charlist(beam_file_path), [:abstract
   ]}}
 ```
 
-可以看到 AST 以 [Erlang Terms](https://www.erlang.org/doc/reference_manual/data_types.html#terms) 的形式表示（称之为 Abstract Code）, 方便阅读. 该 Abstract Code, 在 cover 进行 on-the-fly 插桩过程中大有妙用.
+It can be seen that AST is expressed in the form of [Erlang Terms](https://www.erlang.org/doc/reference_manual/data_types.html#terms) (called Abstract Code), which is easy to read. The Abstract Code is very useful in the on-the-fly instrumentation process of cover.
 
-上述 AST 结构简单易读, 我们可以很简单的将其与模块编译前的源代码（`lib/explore_ast_app.ex`）对应起来, 虽然该 AST 结构是最终的 Erlang AST, 被 Erlang 编译器添加了部分额外的信息, 但不影响阅读:
+The above AST structure is simple and easy to read, and we can easily match it with the source code (`lib/explore_ast_app.ex`) before the module is compiled, although the AST structure is the final Erlang AST, and some extras information are added by the Erlang compiler, but does not affect reading:
 
-![ex_source_ast_code_mapper](./assets/ex_source_ast_code_mapper.jpg)
+![ex_source_ast_code_mapper](assets/en/ex_source_ast_code_mapper.png)
 
-元组（tuple）中的第二个元素一般表示所处的源码行数. 你可以通过官方文档详细了解下 Erlang 的 [Abstract Format](https://www.erlang.org/doc/apps/erts/absform.html), 动手多观察几个 BEAM 文件的 Erlang AST 的结构, 便可了熟于心. 值得注意的是 Abstract Code 在 [OTP 20 之前](https://github.com/erlang/otp/pull/1367)是存放在 BEAM 文件的 Abst Chunk 中的.
+The second element in the tuple generally represents the number of source code lines. You can learn more about Erlang's Abstract Format through the official documentation. By observing the Erlang AST structure of several BEAM files, you will be familiar with it. It is worth noting that the Abstract Code was stored in the Abstract Chunk of the BEAM file before OTP 20.
 
-如果你想了解更多关于 BEAM 文件的细节, 可以查看以下两篇文档:
-- http://beam-wisdoms.clau.se/en/latest/indepth-beam-file.html#beam-term-format
-- https://blog.stenmans.org/theBeamBook/#BEAM_files
+If you want to learn more about BEAM files in detail, you can check out the following two documents:
 
-### 2.4 Elixir 源码编译过程
+- [http://beam-wisdoms.clau.se/en/latest/indepth-beam-file.html#beam-term-format](http://beam-wisdoms.clau.se/en/latest/indepth-beam-file.html#beam-term-format)
+- [https://blog.stenmans.org/theBeamBook/#BEAM_files](https://blog.stenmans.org/theBeamBook/#BEAM_files)
 
-了解了 BEAM File Format（BEAM 文件格式）之后, 我们还有必要了解下 Elixir 代码的编译过程, 有助于我们更好的理解 cover. Elixir 源码的编译为 BEAM 文件的过程可能和你想象的不太一样, 不直接从 Elixir 的 AST, 经过编译器后端的处理后成为可执行的 BEAM Code, 中间还有一个过程, 如下图所示:
+### 2.4. Elixir source code compilation process
 
-![Elixir-Compilation](./assets/Elixir-Compilation.jpg)
+After understanding BEAM File Format, we also need to understand the compilation process of Elixir code, which will help us better understand cover. The process of compiling Elixir source code into BEAM file may not be as you imagined In the same way, instead of directly from Elixir's AST, it becomes executable BEAM Code after being processed by the compiler backend. There is also a process in the middle, as shown in the following figure:
 
-上图的过程可以描述为:
-- Step 1、Elixir 源代码会被自定义的词法分析器（[elixir_tokenizer](https://github.com/elixir-lang/elixir/blob/main/lib/elixir/src/elixir_tokenizer.erl)）和 [yacc](https://www.erlang.org/doc/man/yecc.html) 进行语法分析生成初始版的 Elixir AST, AST 以 Elixir Terms 的形式表示；如果你对 Elixir 的 AST 感兴趣, 可以关注下这个项目 [arjan/ast_ninja](https://github.com/arjan/ast_ninja).
-- Step 2、在 Elixir AST 阶段, 一些自定义的和内置的宏（Macros）还没有被展开, 这些宏在 Expanded Elixir AST 展开为最终的 Elixir AST（final Elixir AST）；
-- Step 3、final Elixir AST 经过 Elixir Compiler 处理会被转换为 Erlang 标准的 AST 形式（[Erlang Abstract Format](https://www.erlang.org/doc/apps/erts/absform.html)）;
-- Step 4、最后, Elixir 会使用 Erlang 的 Compiler 处理  Erlang AST, 将其转换为可被 BEAM 虚拟机（VM）执行的 BEAM 字节码. 关于 compiler 的细节, 可以查看: [elixir_compiler.erl](https://github.com/elixir-lang/elixir/blob/main/lib/elixir/src/elixir_compiler.erl) 和 [elixir_erl.erl](https://github.com/elixir-lang/elixir/blob/main/lib/elixir/src/elixir_erl.erl) 源码, 如果你也想了解 Erlang Compiler 的细节, 可以查看 [theBeamBook/#CH-Compiler](https://blog.stenmans.org/theBeamBook/#CH-Compiler).
+![Elixir-Compilation-Process](assets/en/Elixir-Compilation.jpg)
 
-### 2.5 Cover On-The-Fly 插桩实现
+The above process can be described as:
 
-现在该来到正餐环节了, 让我们来看看 cover 是如何进行插桩和覆盖率收集的, 使用 cover 完成代码覆盖率收集, 必须要知道三把屠龙利剑:
+- Step 1、The Elixir source code will be parsed by a custom lexical analyzer ([elixir_tokenizer](https://github.com/elixir-lang/elixir/blob/main/lib/elixir/src/elixir_tokenizer.erl)) and [yacc](https://www.erlang.org/doc/man/yecc.html) to generate the initial version of Elixir AST, which is expressed in the form of Elixir Terms; if you are interested in Elixir's AST, you can follow this Project [arjan/ast_ninja](https://github.com/arjan/ast_ninja);
 
-![swords](./assets/swords.jpg)
+- Step 2、In the Elixir AST stage, some custom and built-in Macros have not been expanded, and these Macros are expanded into the final Elixir AST in the Expanded Elixir AST stage;
 
-- `cover:start`: 用于创建 cover 覆盖率收集进程, 它会完成存储覆盖率数据的相关 ets 表的创建, [cover.erl#L159](https://github.com/erlang/otp/blob/2f0a547f78363a2504405e82e3ab3ea35b9e6a88/lib/tools/src/cover.erl#L159) & [cover.erl#L632](https://github.com/erlang/otp/blob/2f0a547f78363a2504405e82e3ab3ea35b9e6a88/lib/tools/src/cover.erl#L632), 还可以启动远程（remote） Erlang 节点的 cover 进程.
-- `cover:compile_beam`: 进行插桩, cover 会读取 BEAM 文件的 abstract_code 的内容, 即 Erlang AST, 关键代码在 [cover.erl#L1541](https://github.com/erlang/otp/blob/2f0a547f78363a2504405e82e3ab3ea35b9e6a88/lib/tools/src/cover.erl#L1541), 然后对 Erlang AST From 进行 transform 和 munge, 它会调用 [bump_call](https://github.com/erlang/otp/blob/2f0a547f78363a2504405e82e3ab3ea35b9e6a88/lib/tools/src/cover.erl#L1938), 在每一个可执行行后插入如下 abstract_code:
+- Step 3、Final Elixir AST will be converted into Erlang standard AST form ([Erlang Abstract Format](https://www.erlang.org/doc/apps/erts/absform.html)) after being processed by Elixir Compiler;
+
+- Step 4、Finally, Elixir will use the Erlang Compiler to process the Erlang AST, converting it into BEAM bytecode executable by the BEAM Virtual Machine (VM). For details on the compiler, see: [elixir_compiler.erl](https://github.com/elixir-lang/elixir/blob/main/lib/elixir/src/elixir_compiler.erl) and [elixir_erl.erl](https://github.com/elixir-lang/elixir/blob/main/lib/elixir/src/elixir_erl.erl) source code For more details on the Erlang Compiler, see [theBeamBook/#CH-Compiler](https://blog.stenmans.org/theBeamBook/#CH-Compiler).
+
+### 2.5. Cover On-The-Fly Instrumentation Implementation
+
+Now it's time for dinner. Let's see how cover performs instrumentation and coverage collection. To use cover to complete code coverage collection, we must know three dragon-slaying swords:
+
+![three dragon-slaying swords](assets/en/swords.jpg)
+
+- `cover:start`: Used to create the cover coverage collection process, it will complete the creation of the relevant ets table to store the coverage data, [cover.erl#L159](https://github.com/erlang/otp/blob/2f0a547f78363a2504405e82e3ab3ea35b9e6a88/lib/tools/src/cover.erl#L159) & [cover.erl#L632](https://github.com/erlang/otp/blob/2f0a547f78363a2504405e82e3ab3ea35b9e6a88/lib/tools/src/cover.erl#L632), and we can also start the cover process of the remote Erlang node.
+
+- `cover:compile_beam`: For instrumentation, cover will read the content of the abstract_code of the BEAM file, namely Erlang AST. The key code is in [cover.erl#L1541](https://github.com/erlang/otp/blob/2f0a547f78363a2504405e82e3ab3ea35b9e6a88/lib/tools/src/cover.erl#L1541), and then transform and munge the Erlang AST From, it will call [bump_call](https://github.com/erlang/otp/blob/2f0a547f78363a2504405e82e3ab3ea35b9e6a88/lib/tools/src/cover.erl#L1938), after each executable line will insert the following abstract_code:
 
 ```erlang
     {call,A,{remote,A,{atom,A,ets},{atom,A,update_counter}},
@@ -236,26 +247,27 @@ iex(3)> result = :beam_lib.chunks(String.to_charlist(beam_file_path), [:abstract
       {integer,A,1}]}.
 ```
 
-通过前文对 Erlang AST 的了解, 我们知道这相当于插入了如下一行代码:
+From the previous understanding of Erlang AST, we know that this is equivalent to inserting the following line of code:
 
 ```erlang
 ets:update_counter(?COVER_TABLE, #bump{module=Module, function=Function, arity=Arity, clause=Clause, line=Line}, 1).
 ```
 
-然后对于被 munge 后的 Erlang AST Form, cover 使用了 [Erlang Compiler](https://www.erlang.org/doc/man/compile.html#forms-2) 从被 munge 后的 AST 表达形式中获取 Erlang Beam Code（又称 object code, 即字节码, VM 执行指令）[cover.erl#L1580](https://github.com/erlang/otp/blob/2f0a547f78363a2504405e82e3ab3ea35b9e6a88/lib/tools/src/cover.erl#L1580), 然后利用 [Erlang code server](https://www.erlang.org/doc/man/code.html#load_binary-3) 将获取到的新 object code 替换旧的 object code, `load_binary` [cover.erl#L1581](https://github.com/erlang/otp/blob/2f0a547f78363a2504405e82e3ab3ea35b9e6a88/lib/tools/src/cover.erl#L1581) 到了 ERTS（[Erlang Run Time System](https://blog.stenmans.org/theBeamBook/#P-ERTS)）中 . cover 完成了 Erlang AST 插桩流程, 这样, 每当可执行行被执行, 对应的 ets 存储表都会更新该行被 call 的次数.
-- `cover:analyze`: 分析 ets 表中存储的数据, 可获取可执行被执行（called）的次数, 可用于统计覆盖率数据.
+Then for the mungeed Erlang AST Form, cover uses the Erlang Compiler to obtain the Erlang Beam Code (also known as object code. i.e. bytecode, VM execution instructions) from the mungeed AST expression form. [cover.erl#L1580](https://github.com/erlang/otp/blob/2f0a547f78363a2504405e82e3ab3ea35b9e6a88/lib/tools/src/cover.erl#L1580). And then use the Erlang [code server](https://www.erlang.org/doc/man/code.html#load_binary-3) to replace the old object code with the new object code obtained, `load_binary` [cover.erl#L1581](https://github.com/erlang/otp/blob/2f0a547f78363a2504405e82e3ab3ea35b9e6a88/lib/tools/src/cover.erl#L1581) into [ERTS](https://blog.stenmans.org/theBeamBook/#P-ERTS) (Erlang Run Time System). cover completes the Erlang AST instrumentation process, so that whenever the executable line is Executed, the corresponding ets storage table will update the number of times the code line was called.
 
-> munge: 用于对数据或文件进行一系列可能具有破坏性或不可撤销的更改.
+- `cover:analyze`: Analyze the data stored in the ets table to obtain the number of times the executable line was executed (called), which can be used for statistical coverage data.
 
-## 3. Elixir Application 运行时覆盖率采集示例
+> munge: Used to make a series of potentially destructive or irreversible changes to data or files.
 
-通过前文, 在了解了 Erlang Cover 模块的实现细节之后, 让我们以一个部署运行的 Elixir Application（我们会使用之前的 [yeshan333/explore_ast_app](https://github.com/yeshan333/explore_ast_app) ） 为例, 进行Elixir 应用运行时的大型测试（系统 & 集成测试）代码行级覆盖率采集.
+## 3. Elixir Application runtime coverage collection example
 
-这里我们会使用到一个工具库: [ex_integration_coveralls](https://github.com/yeshan333/ex_integration_coveralls) 进行覆盖率的分析, 它是 Erlang 模块 cover 的一个 Elixir Wrapper.  让我们开始:
+Through the above, after understanding the implementation details of the Erlang Cover module. Let us take a deployed and running Elixir Application (we will use the previous [yesan333/explore_ast_app](https://github.com/yeshan333/explore_ast_app)) as an example to perform large-scale tests (system & integration tests) of the Elixir application runtime of code line-level coverage collection.
 
-- Step 1、添加 `ex_integration_coveralls` 依赖到 	`mix.exs` 文件中:
+Here we will use a tool library: [ex_integration_coveralls](https://github.com/yeshan333/ex_integration_coveralls) for coverage analysis, which is an Elixir Wrapper for the Erlang module cover to collection Elixir runtime system coverage. Let's start:
 
-```erlang
+- Step 1、Add `ex_integration_coveralls` dependency to `mix.exs` file:
+
+```elixir
   defp deps do
     [
       ...,
@@ -264,28 +276,28 @@ ets:update_counter(?COVER_TABLE, #bump{module=Module, function=Function, arity=A
   end
 ```
 
-拉取依赖, 重新构建项目:
+Pull the dependencies and rebuild the project:
 
 ```shell
 mix deps.get
 MIX_ENV=prod mix distillery.release
 ```
 
-- Step 2、启动项目:
+- Step 2、Start the project:
 
 ```shell
 _build/prod/rel/explore_ast_app/bin/explore_ast_app foreground
 ```
 
-- Step 3、连接运行时应用节点的 remote_console:
+- Step 3、Connect to the remote_console of the Elixir runtime application node:
 
-```shell
+```
 _build/prod/rel/explore_ast_app/bin/explore_ast_app remote_console
 ```
 
-- Step 4、利用 ex_integration_coveralls （ExIntegrationCoveralls.execute） 启动 cover, 执行代码覆盖率收集:
+- Step 4、Use `ex_integration_coveralls` (ExIntegrationCoveralls.execute) to start cover and perform code coverage collection:
 
-```erlang
+```elixir
 iex(explore_ast_app@127.0.0.1)1> compiled_beam_dir_path = "/Users/yeshan/oss_github/explore_ast_app/_build/prod/rel/explore_ast_app/lib/explore_ast_app-0.1.0/ebin"
 "/Users/yeshan/oss_github/explore_ast_app/_build/prod/rel/explore_ast_app/lib/explore_ast_app-0.1.0/ebin"
 iex(explore_ast_app@127.0.0.1)2> ExIntegrationCoveralls.execute(compiled_beam_dir_path)
@@ -304,27 +316,27 @@ iex(explore_ast_app@127.0.0.1)5> ExIntegrationCoveralls.get_total_coverage(compi
 0
 ```
 
-可以看到, 初始的覆盖率是 0, 还没有代码被调用.
+As you can see, the initial coverage is 0, because no code has been called yet.
 
-- Step 5、让我们执行以下 cURL :
+- Step 5、Let's execute the following cURL. Let code be called:
 
- ```shell
- $ curl --location --request GET 'http://localhost:8080/hello'
+```shell
+$ curl --location --request GET 'http://localhost:8080/hello'
 hello %
- ```
+```
 
-再次查看代码覆盖率数据:
+Check out the code coverage data again in iex console:
 
-```erlang
+```elixir
 iex(explore_ast_app@127.0.0.1)6> ExIntegrationCoveralls.get_total_coverage(compile_time_source_lib_abs_path, source_code_abs_path)
 17.1
 ```
 
-可以看到, cURL（测试）对该项目的覆盖率是 17.1%.
+As you can see, the cURL (test case) coverage for this project is 17.1%.
 
-我们还可以使用如下方式查看更为详尽的代码覆盖情况, 比如查看 `lib/explore_ast_app/router.ex` 的代码覆盖情况（nil 表示该行不是 executable line）:
+We can also use the following methods to view more detailed code coverage, such as viewing the code coverage of `lib/explore_ast_app/router.ex` (`nil` means the line is not an executable line):
 
-```erlang
+```elixir
 iex(explore_ast_app@127.0.0.1)7> result = ExIntegrationCoveralls.get_coverage_report(compile_time_source_lib_abs_path, source_code_abs_path)
 .......
 iex(explore_ast_app@127.0.0.1)8> Enum.at(Map.get(result, :files), 3)
@@ -459,24 +471,24 @@ iex(explore_ast_app@127.0.0.1)8> Enum.at(Map.get(result, :files), 3)
 }
 ```
 
-基于 [post_cov_stats_to_ud_ci](https://github.com/yeshan333/ex_integration_coveralls/blob/39e24bc5c9e76a625cddfa4039d386db1429ba41/lib/ex_integration_coveralls.ex#L93) 接口，可以进一步对接内部或外部的类似于 [Codecov](https://about.codecov.io/) 的覆盖率系统.
+Based on the `post_cov_stats_to_ud_ci` interface, it is possible to further interface with internal or external [Codecov](https://about.codecov.io/)-like coverage systems.
 
-![coverage_system](./assets/coverage_system.jpg)
+![coverage_system](assets/en/coverage_system.jpg)
 
-基于此, 我们可以实现在 Elixir Application 不停止运行的情况下, 配合大型（集成 & 系统）测试能力, 完成代码覆盖率的收集.
+Based on this, we can realize the collection of code coverage with large-scale (integration & system) testing capabilities without stopping the Elixir Application.
 
-## 4. 大规模 Elixir/Erlang 微服务集群连续运行时覆盖率收集方案
+## 4. Continuous runtime coverage collection solution for large-scale Elixir/Erlang Microservice clusters
 
-随着 Elixir 微服务系统规模的不断扩大, 前一节所展现的覆盖率收集手段需要进一步的演进. 参考 [Prometheus Pull-Base](https://prometheus.io/docs/introduction/overview/#architecture) 的设计, 总体设计（Pull & Push 模式结合）如下:
+With the continuous expansion of the Elixir/Erlang microservice system, the coverage collection method shown in the previous section needs further evolution. Referring to the design of [Prometheus Pull-Base](https://prometheus.io/docs/introduction/overview/#architecture), the overall design (combination of Pull & Push mode) is as follows:
 
-![coverage-arch](./assets/architecture.jpg)
+![coverage_system_design](assets/en/coverage_system.jpg)
 
-我们基于 [ex_integration_coveralls](https://github.com/yeshan333/ex_integration_coveralls) 做拓展, 在 Elixir Application 启动后, 拉起一个 http worker 将代码覆盖率数据实时暴露出去, 方便与异构系统的通信. 由 Coverage Push Gateway 负责定时拉取覆盖率数据（Gateway 可以是一个 OTP Application, 这让可以直接让 
-`ex_integration_coveralls` 拉起 [GenServer Worker](https://github.com/yeshan333/ex_integration_coveralls/blob/main/lib/ex_integration_coveralls/cov_stats_worker.ex) 在分布式 OTP 系统进行交互集成）, 在集成/系统测试系统告知测试结束后, Gateway 将覆盖率 push 给 Cover Center（覆盖率中心）进行代码覆盖率展示.
+We expand based on [ex_integration_coveralls](https://github.com/yeshan333/ex_integration_coveralls). After the Elixir Application is started, a http worker is started up to expose the code coverage data in real time, which is convenient for communication with heterogeneous systems. The Coverage Push Gateway is responsible for regularly pulling the coverage data (Gateway can be a OTP Application, which allows `ex_integration_coveralls` to directly start up the custom [GenServer Worker](https://github.com/yeshan333/ex_integration_coveralls/blob/main/lib/ex_integration_coveralls/cov_stats_worker.ex) for interactive integration test system in the distributed OTP system), after the integration/system test system informs the end of the test, the Gateway pushes the coverage data to the `Cover Center` for code coverage rate display.
 
-End（long way to go）.
+End (long way to go).
 
-## 参考
+## References
+
 - [Code Coverage at Google](https://storage.googleapis.com/pub-tools-public-publication-data/pdf/36f4140541f8dd555fb8aaee2fd719d59ffab041.pdf)
 - [Erlang cover](https://www.erlang.org/doc/man/cover.html#description)
 - [A brief introduction to BEAM](https://www.erlang.org/blog/a-brief-beam-primer/)
