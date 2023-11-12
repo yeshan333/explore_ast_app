@@ -48,6 +48,7 @@ end
 
 release :explore_ast_app do
   set version: current_version(:explore_ast_app)
+  set include_src: :always
   set applications: [
     :runtime_tools
   ]
