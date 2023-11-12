@@ -4,7 +4,7 @@
 #
 
 app = "explore2coverage"
-primary_region = "ord"
+primary_region = "hkg"
 
 [build]
   builder = "heroku/buildpacks:20"
