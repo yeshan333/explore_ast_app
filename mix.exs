@@ -14,6 +14,13 @@ defmodule ExploreAstApp.MixProject do
         "coveralls.detail": :test,
         "coveralls.post": :test,
         "coveralls.html": :test
+      ],
+      default_release: :explore_ast_app,
+      releases: [
+        explore_ast_app: [
+          strip_beams: [keep: ["Docs", "Dbgi"]],
+          applications: [runtime_tools: :permanent]
+        ]
       ]
     ]
   end
